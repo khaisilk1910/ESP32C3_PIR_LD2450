@@ -1,0 +1,283 @@
+substitutions:
+  device_name: presence-pk-ld2450
+  upper_devicename: "Presence PK LD2450" 
+  
+web_server:
+  port: 80
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${upper_devicename}
+  on_boot:
+    priority: 900
+    then:
+       lambda: |-
+        id(cpu_speed) = ESP.getCpuFreqMHz() ;
+
+globals:
+   - id: cpu_speed
+     type: int
+     restore_value: no
+     initial_value: '0'
+
+time:
+  - platform: sntp
+    id: time_sntp
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/uncle-yura/esphome-ld2450
+      ref: master
+    components: [ ld2450 ]
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+  baud_rate: 0
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "TR5ZYInj8JuZ4UZnnX89V2dHDx9mhuFJucuLpHnrfrw="
+
+ota:
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: 192.168.31.13
+  fast_connect: on
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esphome-Web-Ad7E99"
+    password: "WyTYfItemzOz"
+
+captive_portal:   
+
+uart:
+  id: uart_bus
+  tx_pin: 
+    number: GPIO1
+  rx_pin: 
+    number: GPIO3
+  baud_rate: 256000
+  parity: NONE
+  stop_bits: 1
+
+ld2450:
+  uart_id: uart_bus
+  update_interval: 1s
+  invert_y: false
+  invert_x: false
+
+binary_sensor:
+  - platform: ld2450
+    has_target:
+      name: Presence
+    has_moving_target:
+      name: Moving Target
+    has_still_target:
+      name: Still Target
+    presence_regions:
+      - name: "Custom Presence Region 0"
+        region_id: presence_region_0
+  - platform: status
+    name: Online
+    id: ink_ha_connected
+
+text_sensor:
+  - platform: ld2450
+    version:
+      name: "FW"
+    mac_address:
+      name: "MAC address"
+
+button:
+  - platform: restart
+    name: "ESP Restart"
+  - platform: ld2450
+    factory_reset:
+      name: "Factory reset"
+    reboot:
+      name: "Reboot"
+
+switch:
+  - platform: ld2450
+    single_target:
+      name: "Single target"
+    bluetooth:
+      name: "Bluetooth"
+
+number:
+  - platform: ld2450
+    rotate:
+      restore_value: true
+      initial_value: 0
+      name: "Rotate angle"
+    presence_timeout:
+      name: "Presence timeout"
+    presence_regions:
+      - x0: 100
+        y0: 100
+        x1: 200
+        y1: 200
+        id: presence_region_0
+    entry_points:
+      - x: 0
+        y: 0
+    region_0:
+      x0:
+        name: R0X0
+      y0:
+        name: R0Y0
+      x1:
+        name: R0X1
+      y1:
+        name: R0Y1
+
+    region_1:
+      x0:
+        name: R1X0
+      y0:
+        name: R1Y0
+      x1:
+        name: R1X1
+      y1:
+        name: R1Y1
+
+    region_2:
+      x0:
+        name: R2X0
+      y0:
+        name: R2Y0
+      x1:
+        name: R2X1
+      y1:
+        name: R2Y1
+
+  # Setting ending of zone 1 occupancy
+  - platform: template
+    name: "Radar End Zone 1"
+    id: radar_z1_end
+    device_class: distance
+    min_value: 0
+    max_value: 600
+    step: 1
+    mode: box
+    update_interval: never
+    optimistic: true
+    restore_value: true
+    initial_value: 10
+    icon: "mdi:arrow-collapse-right"
+    entity_category: CONFIG
+
+  # Setting ending of zone 2 occupancy
+  - platform: template
+    name: "Radar End Zone 2"
+    id: radar_z2_end
+    device_class: distance
+    min_value: 0
+    max_value: 600
+    step: 1
+    mode: box
+    update_interval: never
+    optimistic: true
+    restore_value: true
+    initial_value: 36
+    icon: "mdi:arrow-collapse-right"
+    entity_category: CONFIG
+
+  # Setting ending of zone 3 occupancy
+  - platform: template
+    name: "Radar End Zone 3"
+    id: radar_z3_end
+    device_class: distance
+    min_value: 0
+    max_value: 600
+    step: 1
+    mode: box
+    update_interval: never
+    optimistic: true
+    restore_value: true
+    initial_value: 100
+    icon: "mdi:arrow-collapse-right"
+    entity_category: CONFIG
+
+select:
+  - platform: ld2450
+    baud_rate:
+      name: "Baud rate"
+    regions_type:
+      name: "Regions type"
+
+sensor:
+  - platform: ld2450
+    target_count:
+      name: Target count
+    person_0:
+      position_x:
+        name: "P0X"  
+      position_y:
+        name: "P0Y"  
+      speed:
+        name: "S0"  
+      resolution:
+        name: "R0"  
+    person_1:
+      position_x:
+        name: "P1X"  
+      position_y:
+        name: "P1Y"  
+      speed:
+        name: "S1"  
+      resolution:
+        name: "R1"  
+    person_2:
+      position_x:
+        name: "P2X"  
+      position_y:
+        name: "P2Y"  
+      speed:
+        name: "S2"  
+      resolution:
+        name: "R2" 
+
+  - platform: template
+    name: "ESP Cpu Speed"
+    accuracy_decimals: 0
+    unit_of_measurement: Mhz
+    lambda: |-
+      return (id(cpu_speed));
+    entity_category: "diagnostic"
+  - platform: uptime
+    name: Uptime
+    id: sys_uptime
+    update_interval: 10s
+  - platform: wifi_signal 
+    name: RSSI
+    id: wifi_signal_db
+    update_interval: 5s
+    entity_category: "diagnostic"
+
+#  - platform: template
+#    id: esp_memory
+#    icon: mdi:memory
+#    name: ESP Free Memory
+#    lambda: return heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+#    unit_of_measurement: 'kB'
+#    state_class: measurement
+#    entity_category: "diagnostic"
+
+#  - platform: template
+#    id: sys_esp_temperature
+#    name: ESP Temperature
+#    lambda: return temperatureRead();
+#    unit_of_measurement: °C
+#    device_class: TEMPERATURE
+#    update_interval: 5s
+#    entity_category: "diagnostic"
